@@ -62,14 +62,5 @@ public class UserController {
         return ResponseEntity.ok("Account verified");
     }
 
-    @GetMapping("/auth/me")
-    @CheckSecurity(roles = {"ADMIN", "USER"})
-    public ResponseEntity<AuthUserDto> getCurrentUser(
-            @RequestHeader("Authorization") String authorization) {
-
-        return ResponseEntity.ok(userService.getAuthUserInfo(authorization));
-    }
-
-
 
 }

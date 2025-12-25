@@ -20,5 +20,4 @@ public interface UserService {
 
     void verifyUser(String token);
 
-    AuthUserDto getAuthUserInfo(String token);
 }

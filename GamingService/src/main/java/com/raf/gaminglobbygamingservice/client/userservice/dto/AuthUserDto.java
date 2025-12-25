@@ -1,4 +1,4 @@
-package com.raf.gaminglobbygamingservice.client.userservice;
+package com.raf.gaminglobbygamingservice.client.userservice.dto;
 
 
 import lombok.Getter;

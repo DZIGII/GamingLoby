@@ -128,6 +128,7 @@ public class UserServiceImpl implements UserService {
 
         Claims claims = Jwts.claims();
         claims.setSubject(user.getUsername());
+        claims.put("userId", user.getId());
         claims.put("username", user.getUsername());
         claims.put("role", user.getRole().getName().name());
 
@@ -153,30 +154,6 @@ public class UserServiceImpl implements UserService {
         verificationTokenRepository.delete(vt);
     }
 
-    @Override
-    public AuthUserDto getAuthUserInfo(String authorization) {
 
-        String username = tokenService.extractUsername(authorization);
-
-        System.out.println("EXTRACTED USERNAME = " + username);
-
-
-        User user = userRepository.findUserByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        AuthUserDto dto = new AuthUserDto();
-        dto.setUserId(user.getId());
-        dto.setRole(user.getRole().getName().name());
-        dto.setBlocked(user.getBlocked());
-
-        if (user.getRole().getName() == RoleName.ADMIN) {
-            dto.setAttendancePercentage(null);
-        } else {
-            dto.setAttendancePercentage(Double.valueOf(user.getUserStats().getAttendedPct()));
-        }
-
-
-        return dto;
-    }
 
 }
