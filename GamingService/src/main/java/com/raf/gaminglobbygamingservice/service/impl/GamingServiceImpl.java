@@ -7,6 +7,7 @@ import com.raf.gaminglobbygamingservice.mapper.GamingMapper;
 import com.raf.gaminglobbygamingservice.model.Game;
 import com.raf.gaminglobbygamingservice.model.Session;
 import com.raf.gaminglobbygamingservice.model.SessionStatus;
+import com.raf.gaminglobbygamingservice.model.SessionType;
 import com.raf.gaminglobbygamingservice.repository.GamingRepository;
 import com.raf.gaminglobbygamingservice.repository.SessionRepository;
 import com.raf.gaminglobbygamingservice.security.service.TokenService;
@@ -55,10 +56,6 @@ public class GamingServiceImpl implements GamingService {
     @Override
     public GameDto updateGame(String token, Long id, GameDto game) {
 
-        Game gg = gamingRepository.findGameByName(game.getName());
-
-        if (gg != null) throw new RuntimeException("Game already exists");
-
         Game g = gamingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Game not found"));
 
@@ -106,6 +103,13 @@ public class GamingServiceImpl implements GamingService {
         return gamingMapper.sessionToDto(saved);
     }
 
+    @Override
+    public Page<SessionDto> serchSession(String authorization, Long gameId, SessionType sessionType, Integer maxPlayers, String description, Boolean joined, Pageable pageable) {
+
+
+
+        return null;
+    }
 
 
 }

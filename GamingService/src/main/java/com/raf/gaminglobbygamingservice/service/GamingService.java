@@ -2,6 +2,7 @@ package com.raf.gaminglobbygamingservice.service;
 
 import com.raf.gaminglobbygamingservice.dto.GameDto;
 import com.raf.gaminglobbygamingservice.dto.SessionDto;
+import com.raf.gaminglobbygamingservice.model.SessionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -14,4 +15,14 @@ public interface GamingService {
     GameDto updateGame(String token, Long id, GameDto game);
 
     SessionDto createSession(String token, SessionDto session);
+
+    Page<SessionDto> serchSession(
+            String authorization,
+            Long gameId,
+            SessionType sessionType,
+            Integer maxPlayers,
+            String description,
+            Boolean joined,
+            Pageable pageable
+    );
 }

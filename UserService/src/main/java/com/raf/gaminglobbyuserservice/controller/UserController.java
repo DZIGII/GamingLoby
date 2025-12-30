@@ -40,15 +40,24 @@ public class UserController {
     @CheckSecurity(roles = {"USER"})
     @PostMapping("/update")
     public ResponseEntity<UserDto> updateUser(
-            @RequestHeader("Authorization") String autorization,
+            @RequestHeader("Authorization") String authorization,
             @RequestBody UserUpdateDto userUpdateDto) {
-        return new ResponseEntity<>(userService.updateProfileData(autorization, userUpdateDto),  HttpStatus.OK);
+
+        return new ResponseEntity<>(
+                userService.updateProfileData(authorization, userUpdateDto),
+                HttpStatus.OK
+        );
     }
 
+    @CheckSecurity(roles = {"ADMIN"})
     @PostMapping("/block/{username}")
-    public ResponseEntity<UserDto> blockUser(@PathVariable String username) {
+    public ResponseEntity<UserDto> blockUser(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable String username
+    ) {
         return new ResponseEntity<>(userService.blockUser(username), HttpStatus.OK);
     }
+
 
 
     @PostMapping("/login")

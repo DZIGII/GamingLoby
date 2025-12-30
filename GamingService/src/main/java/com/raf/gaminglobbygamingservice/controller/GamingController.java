@@ -3,6 +3,7 @@ package com.raf.gaminglobbygamingservice.controller;
 import com.raf.gaminglobbygamingservice.dto.GameDto;
 import com.raf.gaminglobbygamingservice.dto.SessionDto;
 import com.raf.gaminglobbygamingservice.model.Session;
+import com.raf.gaminglobbygamingservice.model.SessionType;
 import com.raf.gaminglobbygamingservice.security.CheckSecurity;
 import com.raf.gaminglobbygamingservice.service.GamingService;
 import org.springframework.data.domain.Page;
@@ -42,7 +43,6 @@ public class GamingController {
             @RequestHeader("Authorization") String authorization,
             @PathVariable Long id,
             @RequestBody GameDto gameDto) {
-
         return gamingService.updateGame(authorization, id, gameDto);
     }
 
@@ -55,6 +55,30 @@ public class GamingController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(gamingService.createSession(authorization, sessionDto));
+    }
+
+    @GetMapping("/session")
+    public ResponseEntity<Page<SessionDto>> getSessons(
+            @RequestParam(required = false) Long gameId,
+            @RequestParam(required = false) SessionType sessionType,
+            @RequestParam(required = false) Integer maxPlayers,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) Boolean joined,
+            Pageable pageable,
+            @RequestHeader("Authorization") String authorization
+            ) {
+
+        return ResponseEntity.ok(
+                gamingService.serchSession(
+                        authorization,
+                        gameId,
+                        sessionType,
+                        maxPlayers,
+                        description,
+                        joined,
+                        pageable
+                )
+        );
     }
 
 
