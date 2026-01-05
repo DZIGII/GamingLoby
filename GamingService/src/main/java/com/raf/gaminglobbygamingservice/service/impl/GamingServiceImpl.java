@@ -4,6 +4,7 @@ import com.raf.gaminglobbygamingservice.dto.GameDto;
 import com.raf.gaminglobbygamingservice.dto.InvitationRequestDto;
 import com.raf.gaminglobbygamingservice.dto.SessionDto;
 import com.raf.gaminglobbygamingservice.mapper.GamingMapper;
+import com.raf.gaminglobbygamingservice.messaging.CancleSessionNotification;
 import com.raf.gaminglobbygamingservice.messaging.InvitationNotificationEvent;
 import com.raf.gaminglobbygamingservice.model.*;
 import com.raf.gaminglobbygamingservice.repository.GamingRepository;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -319,8 +321,52 @@ public class GamingServiceImpl implements GamingService {
         invitationRepository.save(invitation);
     }
 
+    @Override
+    public Void cancleSession(String token, Long sessionId) {
+
+        String jwt = token.startsWith("Bearer ")
+                ? token.substring(7)
+                : token;
+
+        Claims claim = tokenService.parse(jwt);
+        Long userId = claim.get("userId", Long.class);
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() ->  new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Session not found"
+                ));
+
+        if (!session.getOrganizer().equals(userId)) {
+            throw new RuntimeException("You are not allowed to cancle this session");
+        }
+
+        if (!session.getStatus().equals(SessionStatus.SCHEDULED)) {
+            throw new RuntimeException("You cannot cancel this session");
+        }
+
+        session.setStatus(SessionStatus.CANCELLED);
+        sessionRepository.save(session);
+
+        List<Long> userIds = invitationRepository.findInvitedUserIdsBySessionId(session.getId());
+
+        userIds.forEach( uId -> {
+            CancleSessionNotification event = new CancleSessionNotification();
+            event.setUserId(uId);
+            event.setType("SESSION_CANCELLED");
+            event.setContent("Session " + session.getDescription() + " is cancelled");
+
+            String json = messageHelper.createTextMessage(event);
+
+            jmsTemplate.send(destinationNotification, s ->
+                    s.createTextMessage(json)
+            );
+
+        });
 
 
+        return null;
+    }
 
 
 }

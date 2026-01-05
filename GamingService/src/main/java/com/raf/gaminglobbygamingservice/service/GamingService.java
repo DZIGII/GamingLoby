@@ -31,5 +31,6 @@ public interface GamingService {
 
     void acceptInvitation(String token, String invitationToken);
 
+    Void cancleSession(String token, Long sessionId);
 
 }

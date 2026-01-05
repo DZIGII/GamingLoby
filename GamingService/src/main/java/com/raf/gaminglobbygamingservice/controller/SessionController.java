@@ -75,5 +75,13 @@ public class SessionController {
         return ResponseEntity.ok().build();
     }
 
+    @CheckSecurity(roles = {"USER"})
+    @PostMapping("/cancle/{id}")
+    public ResponseEntity<Void> cancleSession(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Long id){
+        gamingService.cancleSession(authorization, id);
+        return ResponseEntity.ok().build();
+    }
 
 }

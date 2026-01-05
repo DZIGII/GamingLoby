@@ -98,6 +98,18 @@ public class NotificationListener {
                 notificationService.markAsSent(notification.getId());
             }
 
+            if ("SESSION_CANCELLED".equals(event.getType())) {
+
+                UserDto user = userServiceRestTemplate.getForObject(
+                        "/{id}",
+                        UserDto.class,
+                        event.getUserId()
+                );
+
+                emailService.sentEmail(user.getEmail(), event.getContent());
+
+            }
+
         } catch (Exception e) {
             System.err.println(
                     "FAILED TO PROCESS NOTIFICATION ID=" + notification.getId()
