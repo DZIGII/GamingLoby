@@ -4,6 +4,8 @@ import com.raf.gaminglobbyuserservice.dto.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Optional;
+
 public interface UserService {
 
     Page<UserDto> findAll(Pageable pageable);
@@ -19,5 +21,9 @@ public interface UserService {
     TokenResponseDto login(TokenRequestDto tokenRequestDto);
 
     void verifyUser(String token);
+
+    Optional<UserDto> getUserByUId(Long id);
+
+    Void activateUser(String token);
 
 }

@@ -33,11 +33,11 @@ public class UserStats {
     private int leftSessions;
 
     @Column(name = "attended_pct",   nullable = false)
-    private int attendedPct = 100;
+    private double attendedPct = 100.0;
 
     public  UserStats() {}
 
-    public UserStats(User user, Title title, int reporteSessions, int attendedSessions, int leftSessions, int attendedPct) {
+    public UserStats(User user, Title title, int reporteSessions, int attendedSessions, int leftSessions, double attendedPct) {
         this.user = user;
         this.title = title;
         this.reporteSessions = reporteSessions;

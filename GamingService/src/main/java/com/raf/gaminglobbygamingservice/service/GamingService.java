@@ -1,6 +1,7 @@
 package com.raf.gaminglobbygamingservice.service;
 
 import com.raf.gaminglobbygamingservice.dto.GameDto;
+import com.raf.gaminglobbygamingservice.dto.InvitationRequestDto;
 import com.raf.gaminglobbygamingservice.dto.SessionDto;
 import com.raf.gaminglobbygamingservice.model.SessionType;
 import org.springframework.data.domain.Page;
@@ -25,4 +26,10 @@ public interface GamingService {
             Boolean joined,
             Pageable pageable
     );
+
+    Void sendInvite(String token, InvitationRequestDto invitationRequestDto);
+
+    void acceptInvitation(String token, String invitationToken);
+
+
 }

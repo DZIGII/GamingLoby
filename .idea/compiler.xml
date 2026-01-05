@@ -9,14 +9,29 @@
         <outputRelativeToContentRoot value="true" />
         <module name="UserService (2)" />
         <module name="UserService (1)" />
-        <module name="UserService" />
+        <module name="jms-helper-spec" />
+        <module name="jms-helper-impl" />
+      </profile>
+      <profile name="Annotation profile for notification-service" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.38/lombok-1.18.38.jar" />
+        </processorPath>
         <module name="GamingService" />
+        <module name="UserService" />
+        <module name="NotificationService" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="gaming-lobby-jms-common" target="17" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="GamingService" options="-parameters" />
+      <module name="NotificationService" options="-parameters" />
       <module name="UserService" options="-parameters" />
       <module name="UserService (1)" options="-parameters" />
       <module name="UserService (2)" options="-parameters" />

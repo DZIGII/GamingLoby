@@ -1,5 +1,7 @@
 package com.raf.gaminglobbyuserservice.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raf.gaminglobbyuserservice.dto.*;
 import com.raf.gaminglobbyuserservice.mapper.UserMapper;
 import com.raf.gaminglobbyuserservice.model.*;
@@ -9,16 +11,17 @@ import com.raf.gaminglobbyuserservice.repository.VerificationTokenRepository;
 import com.raf.gaminglobbyuserservice.security.service.TokenService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import jakarta.ws.rs.NotFoundException;
 import lombok.Getter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.raf.gaminglobbyuserservice.repository.UserRepository;
 import com.raf.gaminglobbyuserservice.service.UserService;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Getter
@@ -31,14 +34,16 @@ public class UserServiceImpl implements UserService {
     private TitleRepository titleRepository;
     private UserMapper userMapper;
     private VerificationTokenRepository verificationTokenRepository;
+    private JmsTemplate jmsTemplate;
 
-    public UserServiceImpl(TokenService tokenService, RoleRepository roleRepository, UserRepository userRepository, TitleRepository titleRepository, UserMapper userMapper, VerificationTokenRepository verificationTokenRepository) {
+    public UserServiceImpl(TokenService tokenService, RoleRepository roleRepository, UserRepository userRepository, TitleRepository titleRepository, UserMapper userMapper, VerificationTokenRepository verificationTokenRepository, JmsTemplate jmsTemplate) {
         this.tokenService = tokenService;
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
         this.titleRepository = titleRepository;
         this.userMapper = userMapper;
         this.verificationTokenRepository = verificationTokenRepository;
+        this.jmsTemplate = jmsTemplate;
     }
 
     @Override
@@ -75,6 +80,22 @@ public class UserServiceImpl implements UserService {
         verificationTokenRepository.save(
                 new VerificationToken(user, token)
         );
+
+
+        NotificationEventDto event = new NotificationEventDto();
+        event.setUserId(user.getId());
+        event.setType("USER_ACTIVATION");
+        event.setContent(token);
+
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String json = objectMapper.writeValueAsString(event);
+
+            jmsTemplate.convertAndSend("notification.queue", json);
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize notification event", e);
+        }
 
 
         return userMapper.userToUserDto(user);
@@ -131,6 +152,12 @@ public class UserServiceImpl implements UserService {
         claims.put("userId", user.getId());
         claims.put("username", user.getUsername());
         claims.put("role", user.getRole().getName().name());
+        claims.put("blocked", user.isBlocked());
+
+        if (user.getRole().getName() == RoleName.USER) {
+            claims.put("attpct", user.getUserStats().getAttendedPct());
+        }
+
 
         System.out.println("CLAIMS = " + claims);
 
@@ -152,6 +179,34 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
         verificationTokenRepository.delete(vt);
+    }
+
+    @Override
+    public Optional<UserDto> getUserByUId(Long id) {
+        return userRepository.findById(id)
+                .map(userMapper::userToUserDto);
+    }
+
+    @Override
+    @Transactional
+    public Void activateUser(String token) {
+
+        VerificationToken verificationToken =
+                verificationTokenRepository.findByToken(token)
+                        .orElseThrow(() -> new RuntimeException("Invalid activation token"));
+
+        User user = verificationToken.getUser();
+
+        if (user.isEnabled()) {
+            throw new RuntimeException("Account already activated");
+        }
+
+        user.setEnabled(true);
+        userRepository.save(user);
+
+        verificationTokenRepository.delete(verificationToken);
+
+        return null;
     }
 
 

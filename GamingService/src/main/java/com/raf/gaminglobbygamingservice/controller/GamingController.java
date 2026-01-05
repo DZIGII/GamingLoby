@@ -46,40 +46,16 @@ public class GamingController {
         return gamingService.updateGame(authorization, id, gameDto);
     }
 
-    @PostMapping("/session")
     @CheckSecurity(roles = {"USER"})
-    public ResponseEntity<SessionDto> createSession(
+    @PostMapping("/invitations/accept")
+    public ResponseEntity<Void> acceptInvitation(
             @RequestHeader("Authorization") String authorization,
-            @RequestBody SessionDto sessionDto) {
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(gamingService.createSession(authorization, sessionDto));
+            @RequestParam String token
+    ) {
+        gamingService.acceptInvitation(authorization, token);
+        return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/session")
-    public ResponseEntity<Page<SessionDto>> getSessons(
-            @RequestParam(required = false) Long gameId,
-            @RequestParam(required = false) SessionType sessionType,
-            @RequestParam(required = false) Integer maxPlayers,
-            @RequestParam(required = false) String description,
-            @RequestParam(required = false) Boolean joined,
-            Pageable pageable,
-            @RequestHeader("Authorization") String authorization
-            ) {
-
-        return ResponseEntity.ok(
-                gamingService.serchSession(
-                        authorization,
-                        gameId,
-                        sessionType,
-                        maxPlayers,
-                        description,
-                        joined,
-                        pageable
-                )
-        );
-    }
 
 
 }

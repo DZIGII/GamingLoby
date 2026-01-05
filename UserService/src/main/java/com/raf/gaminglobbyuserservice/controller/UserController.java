@@ -2,6 +2,8 @@ package com.raf.gaminglobbyuserservice.controller;
 
 
 import com.raf.gaminglobbyuserservice.dto.*;
+import com.raf.gaminglobbyuserservice.model.User;
+import com.raf.gaminglobbyuserservice.model.VerificationToken;
 import com.raf.gaminglobbyuserservice.repository.VerificationTokenRepository;
 import com.raf.gaminglobbyuserservice.security.CheckSecurity;
 import org.springframework.data.domain.Page;
@@ -10,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.raf.gaminglobbyuserservice.service.UserService;
+
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/user")
@@ -69,6 +73,17 @@ public class UserController {
     public ResponseEntity<String> verify(@RequestParam String token) {
         userService.verifyUser(token);
         return ResponseEntity.ok("Account verified");
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Optional<UserDto>> getUserById(@PathVariable Long id) {
+        return new ResponseEntity<>(userService.getUserByUId(id), HttpStatus.OK) ;
+    }
+
+    @GetMapping("/activate")
+    public ResponseEntity<Void> activate(@RequestParam String token) {
+        userService.activateUser(token);
+        return ResponseEntity.ok().build();
     }
 
 

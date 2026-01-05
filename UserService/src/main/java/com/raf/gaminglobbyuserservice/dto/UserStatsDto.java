@@ -14,7 +14,7 @@ public class UserStatsDto {
     private int reportedSessions;
     private int attendedSessions;
     private int leftSessions;
-    private int attendedPct;
+    private double attendedPct;
 
     private String roleName;
 
@@ -23,7 +23,7 @@ public class UserStatsDto {
 
     public UserStatsDto() {}
 
-    public UserStatsDto(String username, int reportedSessions, int attendedSessions, int leftSessions, int attendedPct, String roleName,  Title title) {
+    public UserStatsDto(String username, int reportedSessions, int attendedSessions, int leftSessions, double attendedPct, String roleName,  Title title) {
         this.username = username;
         this.reportedSessions = reportedSessions;
         this.attendedSessions = attendedSessions;
