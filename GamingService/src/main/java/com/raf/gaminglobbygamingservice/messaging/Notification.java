@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class InvitationNotificationEvent {
+public class Notification {
 
     private Long userId;
     private String type;

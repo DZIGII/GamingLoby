@@ -7,6 +7,8 @@ import com.raf.gaminglobbygamingservice.model.SessionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
+
 public interface GamingService {
 
     void createGame(String token, GameDto game);
@@ -33,4 +35,11 @@ public interface GamingService {
 
     Void cancleSession(String token, Long sessionId);
 
+    SessionDto joinSession(String token, Long sessionId);
+
+    Void lockSession(String token, Long sessionId);
+
+    Void recordAttendance(String token, Long sessionId ,Long userId);
+
+    void finishSession(String token, Long sessionId, List<Long> attendedUserIds);
 }

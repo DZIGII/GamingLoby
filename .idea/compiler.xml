@@ -7,21 +7,22 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="UserService (2)" />
-        <module name="UserService (1)" />
         <module name="jms-helper-spec" />
         <module name="jms-helper-impl" />
       </profile>
-      <profile name="Annotation profile for notification-service" enabled="true">
+      <profile name="Annotation profile for UserService" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.38/lombok-1.18.38.jar" />
         </processorPath>
+        <module name="UserService (2)" />
+        <module name="NotificationService" />
+        <module name="UserService (1)" />
         <module name="GamingService" />
         <module name="UserService" />
-        <module name="NotificationService" />
+        <module name="notification-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -35,6 +36,7 @@
       <module name="UserService" options="-parameters" />
       <module name="UserService (1)" options="-parameters" />
       <module name="UserService (2)" options="-parameters" />
+      <module name="notification-service" options="-parameters" />
     </option>
   </component>
 </project>

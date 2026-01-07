@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/sessions")
 public class SessionController {
@@ -83,5 +85,39 @@ public class SessionController {
         gamingService.cancleSession(authorization, id);
         return ResponseEntity.ok().build();
     }
+
+    @CheckSecurity(roles = {"USER"})
+    @PostMapping("/join/{id}")
+    public ResponseEntity<SessionDto> joinSession(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Long id
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.ACCEPTED)
+                .body(gamingService.joinSession(authorization, id));
+    }
+
+    @CheckSecurity(roles = "USER")
+    @PostMapping("/lock/{id}")
+    public ResponseEntity<Void> lockSession(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Long id) {
+        return ResponseEntity
+                .status(HttpStatus.ACCEPTED)
+                .body(gamingService.lockSession(authorization, id));
+    }
+
+
+    @CheckSecurity(roles = {"USER"})
+    @PostMapping("/sessions/{sessionId}/finish")
+    public ResponseEntity<Void> finishSession(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Long sessionId,
+            @RequestBody List<Long> attendedUserIds
+    ) {
+        gamingService.finishSession(authorization, sessionId, attendedUserIds);
+        return ResponseEntity.ok().build();
+    }
+
 
 }

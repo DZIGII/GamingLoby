@@ -3,9 +3,10 @@ package com.raf.gaminglobbygamingservice.service.impl;
 import com.raf.gaminglobbygamingservice.dto.GameDto;
 import com.raf.gaminglobbygamingservice.dto.InvitationRequestDto;
 import com.raf.gaminglobbygamingservice.dto.SessionDto;
+import com.raf.gaminglobbygamingservice.dto.SessionParticipantDto;
 import com.raf.gaminglobbygamingservice.mapper.GamingMapper;
 import com.raf.gaminglobbygamingservice.messaging.CancleSessionNotification;
-import com.raf.gaminglobbygamingservice.messaging.InvitationNotificationEvent;
+import com.raf.gaminglobbygamingservice.messaging.Notification;
 import com.raf.gaminglobbygamingservice.model.*;
 import com.raf.gaminglobbygamingservice.repository.GamingRepository;
 import com.raf.gaminglobbygamingservice.repository.InvitationRepository;
@@ -110,6 +111,19 @@ public class GamingServiceImpl implements GamingService {
         Double attpct = claims.get("attpct", Double.class);
 
         if (attpct < 90.0) {
+
+            Notification event = new Notification(
+                    userId,
+                    "REJECTED_SESSION",
+                    "Session " + sessionDto.getDescription() + " is rejectet, because you have below 90% attcpct."
+            );
+
+            String json = messageHelper.createTextMessage(event);
+
+            jmsTemplate.send(destinationNotification, s ->
+                    s.createTextMessage(json)
+            );
+
             throw new RuntimeException("Session attpct must be greater than 90");
         }
 
@@ -238,7 +252,7 @@ public class GamingServiceImpl implements GamingService {
 
         invitationRepository.save(invitation);
 
-        InvitationNotificationEvent event = new InvitationNotificationEvent(
+        Notification event = new Notification(
                 invitationRequestDto.getInvitedUserId(),
                 "SESSION_INVITE",
                 "Join session: http://localhost:8082/games/invitations/accept?token=" + invitation.getToken()
@@ -367,6 +381,148 @@ public class GamingServiceImpl implements GamingService {
 
         return null;
     }
+
+    @Override
+    public SessionDto joinSession(String token, Long sessionId) {
+
+        String jwt = token.startsWith("Bearer ")
+                ? token.substring(7)
+                : token;
+
+        Claims claims = tokenService.parse(jwt);
+
+        Long userId = claims.get("userId", Long.class);
+//        Boolean blocked = claims.get("blocked", Boolean.class);
+//
+//        if (blocked) {
+//            throw new ResponseStatusException(
+//                    HttpStatus.FORBIDDEN,
+//                    "Blocked users cannot join session"
+//            );
+//        }
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found"));
+
+        if (session.getSessionType().equals("CLOSES")) {
+            throw new RuntimeException("This session is private");
+        }
+
+        SessionParticipant participant = new SessionParticipant();
+        participant.setSession(session);
+        participant.setUserId(userId);
+        participant.setRoleInSession(RoleInSession.PLAYER);
+        participant.setAttended(false);
+        participant.setLeftEarly(false);
+
+        sessionParticipantRepository.save(participant);
+        return gamingMapper.sessionToDto(session);
+    }
+
+    @Override
+    public Void lockSession(String token, Long sessionId) {
+
+        String jwt = token.startsWith("Bearer ")
+                ? token.substring(7)
+                : token;
+
+        Claims claims = tokenService.parse(jwt);
+
+        Long userId = claims.get("userId", Long.class);
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Not found"));
+
+        if (!userId.equals(session.getOrganizer())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        session.setSessionType(SessionType.CLOSED);
+
+        return null;
+    }
+
+    @Override
+    public Void recordAttendance(String token, Long sessionId, Long userId) {
+
+        String jwt = token.startsWith("Bearer ")
+                ? token.substring(7)
+                : token;
+
+        Claims claims = tokenService.parse(jwt);
+
+        Long uId = claims.get("userId", Long.class);
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (!uId.equals(session.getOrganizer())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        for (SessionParticipant participant : session.getParticipants()) {
+            if (participant.getId().equals(userId)) {
+                participant.setAttended(true);
+                return null;
+            }
+        }
+
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+
+    }
+
+    @Override
+    @Transactional
+    public void finishSession(String token, Long sessionId, List<Long> attendedUserIds) {
+
+        String jwt = token.startsWith("Bearer ")
+                ? token.substring(7)
+                : token;
+
+        Claims claims = tokenService.parse(jwt);
+        Long organizerId = claims.get("userId", Long.class);
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+
+
+        if (!organizerId.equals(session.getOrganizer())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only organizer can finish session");
+        }
+
+        if (LocalDateTime.now().isBefore(session.getStartTime())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Session has not started yet"
+            );
+        }
+
+        boolean hasAttendedPlayer = false;
+
+        for (SessionParticipant participant : session.getParticipants()) {
+
+            boolean attended = attendedUserIds.contains(participant.getUserId());
+
+            participant.setAttended(attended);
+            participant.setLeftEarly(!attended);
+
+
+            if (attended && !participant.getUserId().equals(organizerId)) {
+                hasAttendedPlayer = true;
+            }
+
+
+        }
+
+        if (!hasAttendedPlayer) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Session must have at least one attending player"
+            );
+        }
+
+        session.setStatus(SessionStatus.COMPLETED);
+    }
+
 
 
 }

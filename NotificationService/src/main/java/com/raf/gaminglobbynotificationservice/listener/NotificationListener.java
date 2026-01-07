@@ -110,6 +110,10 @@ public class NotificationListener {
 
             }
 
+            if (event.equals("REJECTED_SESSION")) {
+
+            }
+
         } catch (Exception e) {
             System.err.println(
                     "FAILED TO PROCESS NOTIFICATION ID=" + notification.getId()
