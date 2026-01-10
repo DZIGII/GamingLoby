@@ -10,10 +10,10 @@ import java.util.Optional;
 public interface InvitationRepository extends JpaRepository<Invitation, Long> {
     Optional<Invitation> findByToken(String token);
 
-    @Query("""
-        select i.invitedUserId
-        from Invitation i
-        where i.session.id = :sessionId
-    """)
+    @Query(
+            "select i.invitedUserId " +
+                    "from Invitation i " +
+                    "where i.session.id = :sessionId"
+    )
     List<Long> findInvitedUserIdsBySessionId(Long sessionId);
 }

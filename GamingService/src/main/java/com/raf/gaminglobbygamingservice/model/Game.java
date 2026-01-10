@@ -1,7 +1,7 @@
 package com.raf.gaminglobbygamingservice.model;
 
+import javax.persistence.*;
 
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,9 +15,9 @@ import lombok.Setter;
 public class Game {
 
     @Id
-    @Column(name = "game_id",  nullable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long  id;
+    @Column(name = "game_id", nullable = false)
+    private Long id;
 
     private String name;
 
@@ -26,5 +26,4 @@ public class Game {
 
     @Column(nullable = false)
     private String gener;
-
 }

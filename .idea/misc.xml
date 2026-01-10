@@ -10,6 +10,8 @@
         <option value="$PROJECT_DIR$/gaming-lobby-jms-common/pom.xml" />
         <option value="$PROJECT_DIR$/jms-helper-spec/pom.xml" />
         <option value="$PROJECT_DIR$/jms-helper-impl/pom.xml" />
+        <option value="$PROJECT_DIR$/GamingLobbyApiGetaway/pom.xml" />
+        <option value="$PROJECT_DIR$/EurekaServer/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">
@@ -18,7 +20,7 @@
       </set>
     </option>
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_21" project-jdk-name="corretto-21" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" project-jdk-name="11" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
 </project>

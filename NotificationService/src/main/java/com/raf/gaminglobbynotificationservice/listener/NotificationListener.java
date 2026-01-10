@@ -7,13 +7,14 @@ import com.raf.gaminglobbynotificationservice.model.NotificationStatus;
 import com.raf.gaminglobbynotificationservice.repository.NotificationRepository;
 import com.raf.gaminglobbynotificationservice.service.NotificationService;
 import com.raf.gaminglobbynotificationservice.service.impl.EmailService;
-import jakarta.jms.JMSException;
-import jakarta.jms.Message;
+
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.stereotype.Component;
 import com.raf.jms.MessageHelper;
 import org.springframework.web.client.RestTemplate;
 
+import javax.jms.JMSException;
+import javax.jms.Message;
 import java.util.ServiceLoader;
 
 @Component

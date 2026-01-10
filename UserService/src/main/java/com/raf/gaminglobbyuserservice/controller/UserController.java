@@ -27,8 +27,8 @@ public class UserController {
         this.verificationTokenRepository = verificationTokenRepository;
     }
 
-    @GetMapping
     @CheckSecurity(roles = {"ADMIN"})
+    @GetMapping
     public ResponseEntity<Page<UserDto>> getAllUser(
             @RequestHeader("Authorization") String authorization,
             Pageable pageable) {
