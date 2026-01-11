@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Setter
 public class SessionDto {
 
+    private Long id;
     private String name;
     private Long gameId;
     private int maxPlayers;

@@ -5,16 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raf.gaminglobbyuserservice.dto.*;
 import com.raf.gaminglobbyuserservice.mapper.UserMapper;
 import com.raf.gaminglobbyuserservice.model.*;
-import com.raf.gaminglobbyuserservice.repository.RoleRepository;
-import com.raf.gaminglobbyuserservice.repository.TitleRepository;
-import com.raf.gaminglobbyuserservice.repository.VerificationTokenRepository;
+import com.raf.gaminglobbyuserservice.repository.*;
 import com.raf.gaminglobbyuserservice.security.service.TokenService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.Getter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import com.raf.gaminglobbyuserservice.repository.UserRepository;
 import com.raf.gaminglobbyuserservice.service.UserService;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
@@ -35,8 +32,9 @@ public class UserServiceImpl implements UserService {
     private UserMapper userMapper;
     private VerificationTokenRepository verificationTokenRepository;
     private JmsTemplate jmsTemplate;
+    private UserStatsRepository userStatsRepository;
 
-    public UserServiceImpl(TokenService tokenService, RoleRepository roleRepository, UserRepository userRepository, TitleRepository titleRepository, UserMapper userMapper, VerificationTokenRepository verificationTokenRepository, JmsTemplate jmsTemplate) {
+    public UserServiceImpl(TokenService tokenService, RoleRepository roleRepository, UserRepository userRepository, TitleRepository titleRepository, UserMapper userMapper, VerificationTokenRepository verificationTokenRepository, JmsTemplate jmsTemplate,  UserStatsRepository userStatsRepository) {
         this.tokenService = tokenService;
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
@@ -44,6 +42,7 @@ public class UserServiceImpl implements UserService {
         this.userMapper = userMapper;
         this.verificationTokenRepository = verificationTokenRepository;
         this.jmsTemplate = jmsTemplate;
+        this.userStatsRepository = userStatsRepository;
     }
 
     @Override
@@ -135,13 +134,28 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public TokenResponseDto login(TokenRequestDto tokenRequestDto) {
-        User user = userRepository
-                .findUserByUsernameAndPassword(tokenRequestDto.getUsername(), tokenRequestDto.getPassword())
-                .orElseThrow(() -> new RuntimeException(String
-                        .format("User with username: %s and password: %s not found.", tokenRequestDto.getUsername(),
-                                tokenRequestDto.getPassword())));
+    public UserDto unblockUser(String username) {
+        User user = userRepository.findUserByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found!"));
 
+        user.setBlocked(false);
+        userRepository.save(user);
+
+        return userMapper.userToUserDto(user);
+    }
+
+
+    @Override
+    public TokenResponseDto login(TokenRequestDto tokenRequestDto) {
+
+        User user = userRepository
+                .findUserByUsernameAndPassword(
+                        tokenRequestDto.getUsername(),
+                        tokenRequestDto.getPassword()
+                )
+                .orElseThrow(() -> new RuntimeException(
+                        "User not found"
+                ));
 
         if (!user.isEnabled()) {
             throw new RuntimeException("Account not verified.");
@@ -152,17 +166,12 @@ public class UserServiceImpl implements UserService {
         claims.put("userId", user.getId());
         claims.put("username", user.getUsername());
         claims.put("role", user.getRole().getName().name());
-        claims.put("blocked", user.isBlocked());
 
-        if (user.getRole().getName() == RoleName.USER) {
-            claims.put("attpct", user.getUserStats().getAttendedPct());
-        }
-
-
-        System.out.println("CLAIMS = " + claims);
-
-        return new TokenResponseDto(tokenService.generate(claims));
+        return new TokenResponseDto(
+                tokenService.generate(claims)
+        );
     }
+
 
     @Override
     public void verifyUser(String token) {
@@ -208,6 +217,127 @@ public class UserServiceImpl implements UserService {
 
         return null;
     }
+
+    @Override
+    public UserEligibilityDto checkEligibility(Long userId) {
+        System.out.println("-------");
+        System.out.println(userId);
+        System.out.println("--------------");
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        System.out.println("-------");
+        System.out.println(user.toString());
+        System.out.println("--------------");
+
+        UserEligibilityDto dto = new UserEligibilityDto();
+        dto.setBlocked(user.isBlocked());
+        dto.setAttendancePercentage(user.getUserStats().getAttendedPct());
+
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public void incrementJoinedSessions(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        UserStats stats = user.getUserStats();
+        stats.setReporteSessions(stats.getReporteSessions() + 1);
+    }
+
+    @Override
+    @Transactional
+    public void processFinishedSession(SessionFinishStatsDto dto) {
+
+        for (Long userId : dto.getAttendedUserIds()) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            UserStats stats = user.getUserStats();
+            stats.setAttendedSessions(stats.getAttendedSessions() + 1);
+
+            recalculateAttendance(stats);
+        }
+
+        for (Long userId : dto.getAbsentUserIds()) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            UserStats stats = user.getUserStats();
+            stats.setLeftSessions(stats.getLeftSessions() + 1);
+
+            recalculateAttendance(stats);
+        }
+
+        User organizer = userRepository.findById(dto.getOrganizerId())
+                .orElseThrow(() -> new RuntimeException("Organizer not found"));
+
+        UserStats orgStats = organizer.getUserStats();
+
+        boolean successfulSession =
+                dto.getAttendedUserIds() != null &&
+                        !dto.getAttendedUserIds().isEmpty();
+
+        if (successfulSession) {
+            orgStats.setReporteSessions(
+                    orgStats.getReporteSessions() + 1
+            );
+            updateTitleIfNeeded(orgStats);
+        } else {
+            orgStats.setReporteSessions(
+                    Math.max(0, orgStats.getReporteSessions() - 1)
+            );
+        }
+    }
+
+    @Override
+    public UserStatsDto getUserStats(Long userId) {
+        UserStats dto = userStatsRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Cant find user stats"));
+
+        return userMapper.userStatsToUserStatsDto(dto);
+    }
+
+
+    private void recalculateAttendance(UserStats stats) {
+
+        int total =
+                stats.getAttendedSessions() + stats.getLeftSessions();
+
+        if (total == 0) {
+            stats.setAttendedPct(100.0);
+            return;
+        }
+
+        double pct =
+                (stats.getAttendedSessions() * 100.0) / total;
+
+        stats.setAttendedPct(pct);
+    }
+
+    private void updateTitleIfNeeded(UserStats stats) {
+
+        int success = stats.getReporteSessions();
+        Title newTitle;
+
+        if (success >= 100) {
+            newTitle = titleRepository.findTitleByName(TitleName.TITULA5).orElseThrow();
+        } else if (success >= 50) {
+            newTitle = titleRepository.findTitleByName(TitleName.TITULA4).orElseThrow();
+        } else if (success >= 25) {
+            newTitle = titleRepository.findTitleByName(TitleName.TITULA3).orElseThrow();
+        } else if (success >= 10) {
+            newTitle = titleRepository.findTitleByName(TitleName.TITULA2).orElseThrow();
+        } else {
+            return;
+        }
+
+        stats.setTitle(newTitle);
+    }
+
 
 
 

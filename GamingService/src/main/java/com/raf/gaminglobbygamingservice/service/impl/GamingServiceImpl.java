@@ -1,9 +1,9 @@
 package com.raf.gaminglobbygamingservice.service.impl;
 
-import com.raf.gaminglobbygamingservice.dto.GameDto;
-import com.raf.gaminglobbygamingservice.dto.InvitationRequestDto;
-import com.raf.gaminglobbygamingservice.dto.SessionDto;
-import com.raf.gaminglobbygamingservice.dto.SessionParticipantDto;
+import com.raf.gaminglobbygamingservice.client.userservice.UserServiceClient;
+import com.raf.gaminglobbygamingservice.client.userservice.dto.UserEligibilityDto;
+import com.raf.gaminglobbygamingservice.client.userservice.dto.UserStatsDto;
+import com.raf.gaminglobbygamingservice.dto.*;
 import com.raf.gaminglobbygamingservice.mapper.GamingMapper;
 import com.raf.gaminglobbygamingservice.messaging.CancleSessionNotification;
 import com.raf.gaminglobbygamingservice.messaging.Notification;
@@ -29,6 +29,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class GamingServiceImpl implements GamingService {
@@ -41,12 +42,14 @@ public class GamingServiceImpl implements GamingService {
     private MessageHelper messageHelper;
     private JmsTemplate jmsTemplate;
     private SessionParticipantRepository sessionParticipantRepository;
+    private UserServiceClient userServiceClient;
     @Value("${destination.notification}")
     private String destinationNotification;
 
 
 
-    public GamingServiceImpl(SessionRepository sessionRepository, GamingRepository gamingRepository, GamingMapper gamingMapper, TokenService tokenService, InvitationRepository invitationRepository, JmsTemplate jmsTemplate, SessionParticipantRepository sessionParticipantRepository, MessageHelper messageHelper) {
+
+    public GamingServiceImpl(SessionRepository sessionRepository, GamingRepository gamingRepository, GamingMapper gamingMapper, TokenService tokenService, InvitationRepository invitationRepository, JmsTemplate jmsTemplate, SessionParticipantRepository sessionParticipantRepository, MessageHelper messageHelper, UserServiceClient userServiceClient) {
         this.sessionRepository = sessionRepository;
         this.gamingRepository = gamingRepository;
         this.gamingMapper = gamingMapper;
@@ -55,6 +58,7 @@ public class GamingServiceImpl implements GamingService {
         this.jmsTemplate = jmsTemplate;
         this.sessionParticipantRepository = sessionParticipantRepository;
         this.messageHelper = messageHelper;
+        this.userServiceClient = userServiceClient;
     }
 
     @Override
@@ -100,6 +104,12 @@ public class GamingServiceImpl implements GamingService {
         String role = claims.get("role", String.class);
         Long userId = claims.get("userId", Long.class);
 
+        System.out.println("====================");
+        System.out.println(role);
+        System.out.println("==================");
+        System.out.println(userId);
+        System.out.println("====================");
+
         if (!role.equals("USER")) {
             throw new RuntimeException("Only USER can create sessions");
         }
@@ -108,24 +118,26 @@ public class GamingServiceImpl implements GamingService {
             throw new RuntimeException("Session start time must be in the future");
         }
 
-        Double attpct = claims.get("attpct", Double.class);
+        UserEligibilityDto eligibility =
+                userServiceClient.checkEligibility("Bearer " + jwt, userId);
 
-        if (attpct < 90.0) {
 
-            Notification event = new Notification(
-                    userId,
-                    "REJECTED_SESSION",
-                    "Session " + sessionDto.getDescription() + " is rejectet, because you have below 90% attcpct."
+        if (eligibility.isBlocked()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Blocked users cannot create sessions"
             );
-
-            String json = messageHelper.createTextMessage(event);
-
-            jmsTemplate.send(destinationNotification, s ->
-                    s.createTextMessage(json)
-            );
-
-            throw new RuntimeException("Session attpct must be greater than 90");
         }
+
+        if (eligibility.getAttendancePercentage() < 90.0) {
+
+            sendRejectedSessionNotification(userId, sessionDto);
+
+            throw new RuntimeException(
+                    "Attendance percentage below 90%"
+            );
+        }
+
 
         Session session = gamingMapper.sessionDtoToSession(sessionDto);
 
@@ -195,21 +207,29 @@ public class GamingServiceImpl implements GamingService {
 
         Long organizerId = claims.get("userId", Long.class);
         String role = claims.get("role", String.class);
-        Double attpct = claims.get("attpct", Double.class);
-        Boolean blocked = claims.get("blocked", Boolean.class);
 
         if (!role.equals("USER")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        if (blocked != null && blocked) {
+        UserStatsDto userStatsDto;
+        try {
+            userStatsDto = userServiceClient.getUserStats(organizerId, token);
+        } catch (Exception e) {
             throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Blocked users cannot send invitations"
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "User service unavailable"
             );
         }
 
-        if (attpct < 90.0) {
+//        if (userStatsDto.()) {
+//            throw new ResponseStatusException(
+//                    HttpStatus.FORBIDDEN,
+//                    "Blocked users cannot send invitations"
+//            );
+//        }
+
+        if (userStatsDto.getAttendedPct() < 90.0) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Attendance percentage below 90%"
@@ -260,12 +280,13 @@ public class GamingServiceImpl implements GamingService {
 
         String json = messageHelper.createTextMessage(event);
 
-        jmsTemplate.send(destinationNotification, s ->
-            s.createTextMessage(json)
+        jmsTemplate.send(destinationNotification,
+                s -> s.createTextMessage(json)
         );
 
         return null;
     }
+
 
     @Override
     public void acceptInvitation(String authorization, String token) {
@@ -385,27 +406,38 @@ public class GamingServiceImpl implements GamingService {
     @Override
     public SessionDto joinSession(String token, Long sessionId) {
 
-        String jwt = token.startsWith("Bearer ")
-                ? token.substring(7)
-                : token;
+        String bearerToken = token.startsWith("Bearer ")
+                ? token
+                : "Bearer " + token;
+
+        String jwt = bearerToken.substring(7);
 
         Claims claims = tokenService.parse(jwt);
-
         Long userId = claims.get("userId", Long.class);
-//        Boolean blocked = claims.get("blocked", Boolean.class);
-//
-//        if (blocked) {
-//            throw new ResponseStatusException(
-//                    HttpStatus.FORBIDDEN,
-//                    "Blocked users cannot join session"
-//            );
-//        }
+
+        UserEligibilityDto eligibility =
+                userServiceClient.checkEligibility(bearerToken, userId);
+
+        if (eligibility.isBlocked()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Blocked users cannot join sessions"
+            );
+        }
 
         Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Session not found"
+                        )
+                );
 
-        if (session.getSessionType().equals("CLOSES")) {
-            throw new RuntimeException("This session is private");
+        if (session.getSessionType() == SessionType.CLOSED) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "This session is private"
+            );
         }
 
         SessionParticipant participant = new SessionParticipant();
@@ -416,8 +448,12 @@ public class GamingServiceImpl implements GamingService {
         participant.setLeftEarly(false);
 
         sessionParticipantRepository.save(participant);
+
+        userServiceClient.incrementJoined(bearerToken, userId);
+
         return gamingMapper.sessionToDto(session);
     }
+
 
     @Override
     public Void lockSession(String token, Long sessionId) {
@@ -520,7 +556,41 @@ public class GamingServiceImpl implements GamingService {
             );
         }
 
+        List<Long> allUsers = session.getParticipants()
+                .stream()
+                .map(SessionParticipant::getUserId)
+                .filter(id -> !id.equals(organizerId))
+                .collect(Collectors.toList());;
+
+        List<Long> absentUsers = allUsers.stream()
+                .filter(id -> !attendedUserIds.contains(id))
+                .collect(Collectors.toList());
+
+        SessionFinishStatsDto dto = new SessionFinishStatsDto();
+        dto.setSessionId(sessionId);
+        dto.setOrganizerId(organizerId);
+        dto.setAttendedUserIds(attendedUserIds);
+        dto.setAbsentUserIds(absentUsers);
+
+        userServiceClient.notifySessionFinished(token, dto);
         session.setStatus(SessionStatus.COMPLETED);
+
+    }
+
+    private void sendRejectedSessionNotification(Long userId, SessionDto sessionDto) {
+
+        Notification event = new Notification(
+                userId,
+                "REJECTED_SESSION",
+                "Session '" + sessionDto.getDescription()
+                        + "' rejected because attendance is below 90%"
+        );
+
+        String json = messageHelper.createTextMessage(event);
+
+        jmsTemplate.send(destinationNotification, s ->
+                s.createTextMessage(json)
+        );
     }
 
 

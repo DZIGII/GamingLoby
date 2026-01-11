@@ -18,6 +18,8 @@ public interface UserService {
 
     UserDto blockUser(String username);
 
+    UserDto unblockUser(String username);
+
     TokenResponseDto login(TokenRequestDto tokenRequestDto);
 
     void verifyUser(String token);
@@ -26,4 +28,11 @@ public interface UserService {
 
     Void activateUser(String token);
 
+    UserEligibilityDto checkEligibility(Long userId);
+
+    void incrementJoinedSessions(Long userId);
+
+    void processFinishedSession(SessionFinishStatsDto dto);
+
+    UserStatsDto getUserStats(Long userId);
 }

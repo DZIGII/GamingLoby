@@ -15,6 +15,7 @@ import com.raf.gaminglobbyuserservice.service.UserService;
 
 import java.util.Optional;
 
+@CrossOrigin(origins = "http://localhost:5176")
 @RestController
 @RequestMapping("/user")
 public class UserController {
@@ -62,6 +63,14 @@ public class UserController {
         return new ResponseEntity<>(userService.blockUser(username), HttpStatus.OK);
     }
 
+    @CheckSecurity(roles = {"ADMIN"})
+    @PostMapping("/unblock/{username}")
+    public ResponseEntity<UserDto> unblockUser(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable String username
+    ) {
+        return new ResponseEntity<>(userService.unblockUser(username), HttpStatus.OK);
+    }
 
 
     @PostMapping("/login")
@@ -84,6 +93,39 @@ public class UserController {
     public ResponseEntity<Void> activate(@RequestParam String token) {
         userService.activateUser(token);
         return ResponseEntity.ok().build();
+    }
+
+    //@CheckSecurity(roles = {"USER", "ADMIN"})
+    @GetMapping("/eligibility/{id}")
+    public ResponseEntity<UserEligibilityDto> checkEligibility(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(userService.checkEligibility(id));
+    }
+
+    @CheckSecurity(roles = {"USER"})
+    @PostMapping("/stats/{id}/joined")
+    public ResponseEntity<Void> incrementJoined(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Long id
+    ) {
+        userService.incrementJoinedSessions(id);
+        return ResponseEntity.ok().build();
+    }
+
+
+    @CheckSecurity(roles = {"USER"})
+    @PostMapping("/stats/session-finished")
+    public ResponseEntity<Void> sessionFinished(
+            @RequestBody SessionFinishStatsDto dto
+    ) {
+        userService.processFinishedSession(dto);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/internal/users/{id}/status")
+    public UserStatsDto getUserStatus(@PathVariable Long id) {
+        return userService.getUserStats(id);
     }
 
 

@@ -1,12 +1,16 @@
 package com.raf.gaminglobbyuserservice.dto;
 
 import com.raf.gaminglobbyuserservice.model.Title;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 
 @Getter
 @Setter
+@AllArgsConstructor
+@NoArgsConstructor
 public class UserStatsDto {
 
     private String username;
@@ -18,18 +22,5 @@ public class UserStatsDto {
 
     private String roleName;
 
-    private Title title;
 
-
-    public UserStatsDto() {}
-
-    public UserStatsDto(String username, int reportedSessions, int attendedSessions, int leftSessions, double attendedPct, String roleName,  Title title) {
-        this.username = username;
-        this.reportedSessions = reportedSessions;
-        this.attendedSessions = attendedSessions;
-        this.leftSessions = leftSessions;
-        this.attendedPct = attendedPct;
-        this.roleName = roleName;
-        this.title = title;
-    }
 }

@@ -9,7 +9,9 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 
+import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
@@ -17,50 +19,44 @@ import java.util.Arrays;
 @Configuration
 public class SecurityAspect {
 
+    private final HttpServletRequest request;
     private final TokenService tokenService;
 
-    public SecurityAspect(TokenService tokenService) {
+    public SecurityAspect(HttpServletRequest request, TokenService tokenService) {
+        this.request = request;
         this.tokenService = tokenService;
     }
 
     @Around("@annotation(com.raf.gaminglobbygamingservice.security.CheckSecurity)")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
 
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Authorization header");
+        }
+
+        String token = authHeader.substring(7);
+
+        Claims claims;
+        try {
+            claims = tokenService.parse(token);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token");
+        }
+
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
-
-        String token = null;
-
-        String[] paramNames = signature.getParameterNames();
-        Object[] args = joinPoint.getArgs();
-
-        for (int i = 0; i < paramNames.length; i++) {
-            if ("authorization".equals(paramNames[i])) {
-                String authHeader = args[i].toString();
-                if (authHeader.startsWith("Bearer ")) {
-                    token = authHeader.substring(7);
-                }
-            }
-        }
-
-        if (token == null) {
-            throw new RuntimeException("Missing Authorization header");
-        }
-
-        Claims claims = tokenService.parse(token);
-
-        if (claims == null) {
-            throw new RuntimeException("Invalid token");
-        }
-
         CheckSecurity checkSecurity = method.getAnnotation(CheckSecurity.class);
+
         String role = claims.get("role", String.class);
 
         if (!Arrays.asList(checkSecurity.roles()).contains(role)) {
-            throw new RuntimeException("Forbidden");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
         }
 
         return joinPoint.proceed();
     }
+
 }
 

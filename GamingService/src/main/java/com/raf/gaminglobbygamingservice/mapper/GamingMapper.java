@@ -21,6 +21,7 @@ public class GamingMapper {
 
     public GameDto gameToGameDto(Game game) {
         GameDto gameDto = new GameDto();
+        gameDto.setId(game.getId());
         gameDto.setName(game.getName());
         gameDto.setDescription(game.getDescription());
         gameDto.setGenre(game.getGener());
@@ -31,6 +32,7 @@ public class GamingMapper {
     public Session sessionDtoToSession(SessionDto dto) {
 
         Session session = new Session();
+        session.setId(dto.getId());
         session.setName(dto.getName());
         session.setDescription(dto.getDescription());
         session.setMaxPlayers(dto.getMaxPlayers());
@@ -43,6 +45,7 @@ public class GamingMapper {
     public SessionDto sessionToDto(Session session) {
 
         SessionDto dto = new SessionDto();
+        dto.setId(session.getId());
         dto.setName(session.getName());
         dto.setDescription(session.getDescription());
         dto.setMaxPlayers(session.getMaxPlayers());

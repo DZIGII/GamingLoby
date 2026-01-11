@@ -19,6 +19,7 @@ public class UserMapper {
         userDto.setFirstName(user.getFirstName());
         userDto.setLastName(user.getLastName());
         userDto.setBirthDate(user.getDateOfBirth());
+        userDto.setBlocked(user.isBlocked());
 
         return  userDto;
     }
@@ -58,8 +59,6 @@ public class UserMapper {
         dto.setLeftSessions(stats.getLeftSessions());
         dto.setAttendedPct(stats.getAttendedPct());
 
-        dto.setTitle(new Title(TitleName.TITULA1, 0));
-
         return dto;
     }
 
@@ -75,5 +74,16 @@ public class UserMapper {
         return user;
     }
 
+    public UserStatsDto userStatsToUserStatsDto(UserStats userStats) {
+        UserStatsDto dto = new UserStatsDto();
+        dto.setUsername(userStats.getUser().getUsername());
+        dto.setLeftSessions(userStats.getLeftSessions());
+        dto.setReportedSessions(userStats.getReporteSessions());;
+        dto.setAttendedSessions(userStats.getAttendedSessions());
+        dto.setRoleName(userStats.getUser().getRole().getName().name());
+        dto.setAttendedPct(userStats.getAttendedPct());
+
+        return dto;
+    }
 
 }

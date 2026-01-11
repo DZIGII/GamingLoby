@@ -15,6 +15,7 @@ public class UserDto {
     private String lastName;
     private String email;
     private LocalDate birthDate;
+    private Boolean blocked;
 
     public UserDto() {}
 }

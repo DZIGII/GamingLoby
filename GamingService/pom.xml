@@ -20,7 +20,7 @@
 
     <properties>
         <java.version>11</java.version>
-        <spring-cloud.version>Hoxton.RELEASE</spring-cloud.version>
+        <spring-cloud.version>Hoxton.SR9</spring-cloud.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -36,6 +36,7 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
 
     <dependencies>
 
@@ -122,6 +123,17 @@
             <artifactId>jms-helper-impl</artifactId>
             <version>1.0.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
 
     </dependencies>
 
