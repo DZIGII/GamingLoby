@@ -20,6 +20,7 @@ public class UserMapper {
         userDto.setLastName(user.getLastName());
         userDto.setBirthDate(user.getDateOfBirth());
         userDto.setBlocked(user.isBlocked());
+        userDto.setId(user.getId());
 
         return  userDto;
     }

@@ -1,6 +1,7 @@
 package com.raf.gaminglobbygamingservice.controller;
 
 import com.raf.gaminglobbygamingservice.dto.InvitationRequestDto;
+import com.raf.gaminglobbygamingservice.dto.SessionDetailsDto;
 import com.raf.gaminglobbygamingservice.dto.SessionDto;
 import com.raf.gaminglobbygamingservice.model.SessionType;
 import com.raf.gaminglobbygamingservice.security.CheckSecurity;
@@ -117,6 +118,26 @@ public class SessionController {
     ) {
         gamingService.finishSession(authorization, sessionId, attendedUserIds);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/my")
+    @CheckSecurity(roles = {"USER"})
+    public ResponseEntity<List<SessionDto>> getMySessions(
+            @RequestHeader("Authorization") String authorization
+    ) {
+        return ResponseEntity.ok(
+                gamingService.getMySessions(authorization)
+        );
+    }
+    @GetMapping("/my/{sessionId}")
+    @CheckSecurity(roles = {"USER"})
+    public ResponseEntity<SessionDetailsDto> getMySessionDetails(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable Long sessionId
+    ) {
+        return ResponseEntity.ok(
+                gamingService.getMySessionDetails(authorization, sessionId)
+        );
     }
 
 

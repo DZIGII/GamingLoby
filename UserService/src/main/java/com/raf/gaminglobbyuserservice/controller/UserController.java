@@ -2,8 +2,6 @@ package com.raf.gaminglobbyuserservice.controller;
 
 
 import com.raf.gaminglobbyuserservice.dto.*;
-import com.raf.gaminglobbyuserservice.model.User;
-import com.raf.gaminglobbyuserservice.model.VerificationToken;
 import com.raf.gaminglobbyuserservice.repository.VerificationTokenRepository;
 import com.raf.gaminglobbyuserservice.security.CheckSecurity;
 import org.springframework.data.domain.Page;
@@ -13,22 +11,21 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.raf.gaminglobbyuserservice.service.UserService;
 
+import java.util.List;
 import java.util.Optional;
 
-@CrossOrigin(origins = "http://localhost:5176")
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/user")
 public class UserController {
 
     private UserService userService;
-    private VerificationTokenRepository verificationTokenRepository;
 
-    public UserController(UserService userService,  VerificationTokenRepository verificationTokenRepository) {
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.verificationTokenRepository = verificationTokenRepository;
     }
 
-    @CheckSecurity(roles = {"ADMIN"})
+    @CheckSecurity(roles = {"ADMIN", "USER"})
     @GetMapping
     public ResponseEntity<Page<UserDto>> getAllUser(
             @RequestHeader("Authorization") String authorization,
@@ -114,7 +111,7 @@ public class UserController {
     }
 
 
-    @CheckSecurity(roles = {"USER"})
+
     @PostMapping("/stats/session-finished")
     public ResponseEntity<Void> sessionFinished(
             @RequestBody SessionFinishStatsDto dto
@@ -127,6 +124,16 @@ public class UserController {
     public UserStatsDto getUserStatus(@PathVariable Long id) {
         return userService.getUserStats(id);
     }
+
+    @PostMapping("/internal/users/batch")
+    public ResponseEntity<List<UserDto>> getUsersByIds(
+            @RequestBody List<Long> userIds
+    ) {
+        return ResponseEntity.ok(
+                userService.getUsersByIds(userIds)
+        );
+    }
+
 
 
 }

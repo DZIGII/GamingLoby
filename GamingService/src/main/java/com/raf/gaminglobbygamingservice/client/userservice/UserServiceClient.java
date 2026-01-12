@@ -1,5 +1,6 @@
 package com.raf.gaminglobbygamingservice.client.userservice;
 
+import com.raf.gaminglobbygamingservice.client.userservice.dto.UserDto;
 import com.raf.gaminglobbygamingservice.client.userservice.dto.UserEligibilityDto;
 import com.raf.gaminglobbygamingservice.client.userservice.dto.UserStatsDto;
 import com.raf.gaminglobbygamingservice.dto.SessionFinishStatsDto;
@@ -13,6 +14,11 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class UserServiceClient {
@@ -98,10 +104,35 @@ public class UserServiceClient {
                         HttpMethod.GET,
                         entity,
                         UserStatsDto.class,
-                        userId // ⬅️ OVO JE NEDOSTAJALO
+                        userId
                 );
 
         return response.getBody();
+    }
+
+    public Map<Long, String> getUsernamesMap(
+            List<Long> userIds,
+            String authorization
+    ) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.AUTHORIZATION, authorization);
+
+        HttpEntity<List<Long>> entity =
+                new HttpEntity<>(userIds, headers);
+
+        ResponseEntity<UserDto[]> response =
+                userServiceRestTemplate.exchange(
+                        "/internal/users/batch",
+                        HttpMethod.POST,
+                        entity,
+                        UserDto[].class
+                );
+
+        return Arrays.stream(response.getBody())
+                .collect(Collectors.toMap(
+                        UserDto::getId,
+                        UserDto::getUsername
+                ));
     }
 
 }

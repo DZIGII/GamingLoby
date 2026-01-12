@@ -18,8 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Getter
 @Service
@@ -300,6 +302,17 @@ public class UserServiceImpl implements UserService {
 
         return userMapper.userStatsToUserStatsDto(dto);
     }
+
+    @Override
+    public List<UserDto> getUsersByIds(List<Long> userIds) {
+
+        List<User> users = userRepository.findAllById(userIds);
+
+        return users.stream()
+                .map(userMapper::userToUserDto)
+                .collect(Collectors.toList());
+    }
+
 
 
     private void recalculateAttendance(UserStats stats) {

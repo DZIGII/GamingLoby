@@ -2,6 +2,7 @@ package com.raf.gaminglobbygamingservice.service;
 
 import com.raf.gaminglobbygamingservice.dto.GameDto;
 import com.raf.gaminglobbygamingservice.dto.InvitationRequestDto;
+import com.raf.gaminglobbygamingservice.dto.SessionDetailsDto;
 import com.raf.gaminglobbygamingservice.dto.SessionDto;
 import com.raf.gaminglobbygamingservice.model.SessionType;
 import org.springframework.data.domain.Page;
@@ -42,4 +43,10 @@ public interface GamingService {
     Void recordAttendance(String token, Long sessionId ,Long userId);
 
     void finishSession(String token, Long sessionId, List<Long> attendedUserIds);
+
+    List<SessionDto> getMySessions(String authorization);
+
+    SessionDetailsDto getMySessionDetails(String authorization, Long sessionId);
+
+
 }

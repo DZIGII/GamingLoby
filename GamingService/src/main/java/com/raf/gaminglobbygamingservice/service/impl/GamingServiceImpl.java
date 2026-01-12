@@ -28,6 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -525,12 +526,12 @@ public class GamingServiceImpl implements GamingService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only organizer can finish session");
         }
 
-        if (LocalDateTime.now().isBefore(session.getStartTime())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Session has not started yet"
-            );
-        }
+//        if (LocalDateTime.now().isBefore(session.getStartTime())) {
+//            throw new ResponseStatusException(
+//                    HttpStatus.BAD_REQUEST,
+//                    "Session has not started yet"
+//            );
+//        }
 
         boolean hasAttendedPlayer = false;
 
@@ -576,6 +577,80 @@ public class GamingServiceImpl implements GamingService {
         session.setStatus(SessionStatus.COMPLETED);
 
     }
+
+    @Override
+    public List<SessionDto> getMySessions(String token) {
+
+        String jwt = token.startsWith("Bearer ")
+                ? token.substring(7)
+                : token;
+
+        Claims claims = tokenService.parse(jwt);
+        Long userId = claims.get("userId", Long.class);
+
+        List<Session> sessions = sessionRepository.findByOrganizer(userId);
+
+        return sessions.stream()
+                .map(gamingMapper::sessionToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public SessionDetailsDto getMySessionDetails(String token, Long sessionId) {
+
+        String jwt = token.startsWith("Bearer ")
+                ? token.substring(7)
+                : token;
+
+        Claims claims = tokenService.parse(jwt);
+        Long organizerId = claims.get("userId", Long.class);
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Session not found"
+                ));
+
+        if (!session.getOrganizer().equals(organizerId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not organizer of this session"
+            );
+        }
+
+        List<SessionParticipant> participants =
+                sessionParticipantRepository.findBySessionId(sessionId);
+
+        List<Long> userIds = participants.stream()
+                .map(SessionParticipant::getUserId)
+                .collect(Collectors.toList());
+
+        Map<Long, String> usernames =
+                userServiceClient.getUsernamesMap(userIds, token);
+
+        List<SessionParticipantViewDto> participantViews =
+                participants.stream()
+                        .map(p -> new SessionParticipantViewDto(
+                                p.getUserId(),
+                                usernames.get(p.getUserId()),
+                                p.getRoleInSession().toString()
+                        ))
+                        .collect(Collectors.toList());
+
+
+        SessionDetailsDto dto = new SessionDetailsDto();
+        dto.setId(session.getId());
+        dto.setName(session.getName());
+        dto.setSessionType(session.getSessionType());
+        dto.setStatus(session.getStatus());
+        dto.setStartTime(session.getStartTime());
+        dto.setParticipants(participantViews);
+
+        return dto;
+    }
+
+
+
 
     private void sendRejectedSessionNotification(Long userId, SessionDto sessionDto) {
 
